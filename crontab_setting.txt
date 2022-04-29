@@ -10,8 +10,5 @@ ES_HOST=http://dev1.whyit.co.kr
 ES_PORT=48093
 ES_INDEX=ghyang-snmp-20220421
 
-# TEMP
-SNMP_PORT=48161
 
-
-*/1 * * * * /etc/poller_for_INMS/venv/bin/python3 /etc/poller_for_INMS/poller.py >> /etc/poller_for_INMS/poller.log 2>&1
+*/10 * * * * /etc/poller_for_INMS/venv/bin/python3 /etc/poller_for_INMS/snmp_poller.py >> /etc/poller_for_INMS/snmp_poller.log 2>&1
