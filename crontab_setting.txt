@@ -1,14 +1,14 @@
 # mariadb
-DB_USER=YT
-DB_PASSWORD=~!blue0427()
-DB_HOST=dev1.whyit.co.kr
-DB_NAME=ghyang_nms
-DB_PORT=48092
+DB_USER=
+DB_PASSWORD=
+DB_HOST=
+DB_NAME=
+DB_PORT=
 
 # ES
-ES_HOST=http://dev1.whyit.co.kr
-ES_PORT=48093
-ES_INDEX=ghyang-snmp-20220421
+ES_HOST=
+ES_PORT=
+ES_INDEX=
 
 
 */10 * * * * /etc/poller_for_INMS/venv/bin/python3 /etc/poller_for_INMS/snmp_poller.py >> /etc/poller_for_INMS/snmp_poller.log 2>&1
