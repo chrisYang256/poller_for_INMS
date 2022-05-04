@@ -98,6 +98,7 @@ class SendData:
         helpers.bulk(es, docs)
         
         print("🙋 Device data insert to ES success!")
+        print("logged time: ", self.local_time)
 
 make_data = MakeData()
 data      = make_data.process_device_data()
@@ -105,6 +106,8 @@ data      = make_data.process_device_data()
 send_data = SendData()
 send_data.update_sql(data)
 send_data.insert_to_es(data)
+
+
 
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
