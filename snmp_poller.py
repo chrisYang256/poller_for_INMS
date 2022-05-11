@@ -79,8 +79,8 @@ class SendData:
 
         print("🙋 Device data update in sql success!")
 
-    def insert_to_es(self, snmp_devices_data: list) -> None:
-        index = os.getenv("ES_INDEX")
+    def add_to_es(self, snmp_devices_data: list) -> None:
+        index = f"ghyang-snmp-{self.local_time.strftime('%Y%m%d')}"
 
         docs: list[dict] = []
         for device_data in snmp_devices_data["snmp_devices_data"]:
@@ -97,7 +97,7 @@ class SendData:
 
         helpers.bulk(es, docs)
         
-        print("🙋 Device data insert to ES success!")
+        print("🙋 Device data add to ES success!")
         print("logged time: ", self.local_time)
 
 make_data = MakeData()
@@ -105,7 +105,7 @@ data      = make_data.process_device_data()
 
 send_data = SendData()
 send_data.update_sql(data)
-send_data.insert_to_es(data)
+send_data.add_to_es(data)
 
 
 
