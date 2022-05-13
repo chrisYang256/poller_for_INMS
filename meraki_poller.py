@@ -20,7 +20,7 @@ dashboard = meraki.DashboardAPI(
 )
 
 # meraki api 다루는 연습 / 구조 파악을 위해 의도적으로 여러 template들을 써봄
-def select_organization() -> list:
+def select_meraki_organization() -> list:
     orgs = dashboard.organizations.getOrganizations()
 
     org_id = ""
@@ -30,11 +30,16 @@ def select_organization() -> list:
 
     network_id = dashboard.networks.getOrganizationNetworks(org_id)[0]["id"]
 
+    if org_id or network_id is None:
+        raise Exception("⛔ No data")
+
+    print("🙋 Select meraki organization success!")
+
     return { "org_id": org_id, "network_id": network_id }
 
 # devices 가져오고 db에 저장 -> organization id 필요
-def upsert_meraki_device_to_sql():
-    org_id = select_organization()["org_id"]
+def upsert_meraki_device_to_sql(meraki_org_info):
+    org_id = meraki_org_info["org_id"]
 
     meraki_device = dashboard.devices.getOrganizationDevices(org_id)
 
@@ -87,11 +92,11 @@ def upsert_meraki_device_to_sql():
     db.commit()
     db.close()
 
-upsert_meraki_device_to_sql()
+    print("🙋 Upsert meraki device to sql success!")
 
 # clients 가져오고 ES에 저장 -> network id 필요
-def add_meraki_client_to_es():
-    network_id = select_organization()["network_id"]
+def add_meraki_client_to_es(meraki_org_info):
+    network_id = meraki_org_info["network_id"]
 
     meraki_client = dashboard.clients.getNetworkClients(network_id)
 
@@ -131,5 +136,9 @@ def add_meraki_client_to_es():
         })
     
     helpers.bulk(es, docs)
-        
-add_meraki_client_to_es()
+
+    print("🙋 Add meraki client to es success!")
+
+org = select_meraki_organization()
+upsert_meraki_device_to_sql(org)
+add_meraki_client_to_es(org)

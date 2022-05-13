@@ -19,26 +19,30 @@
 - grafana 7.5.3
 - mariadb 10.2.43(mysql 15.1)
 - elastic search 6.8.6(lucene 7.7.2)
+- meraki==0.110.4
 
 </br>
 
 ## > dotenv
 
 ```py
-# 로컬 테스트를 위해 사용합니다.
 # 문자열에 따옴표("")를 쓰지 않으셔도 됩니다.
+# "=" 앞뒤로 띄어쓰기를 하는 경우 경우에 따라 적용되지 않을 수 있습니다. 
 
 # Mariadb
-DB_USER     =
-DB_PASSWORD =
-DB_HOST     =
-DB_NAME     =
-DB_PORT     =
+DB_USER=
+DB_PASSWORD=
+DB_HOST=
+DB_NAME=
+DB_PORT=
 
 # ES
-ES_HOST  =
-ES_PORT  =
-ES_INDEX =
+ES_HOST=
+ES_PORT=
+ES_INDEX=
+
+# Meraki
+MERAKI_DASHBOARD_API_KEY=
 ```
 
 ## > 가상환경 세팅
