@@ -19,6 +19,9 @@ class MakeData:
         snmp_device = cursor.fetchall()
 
         db.close()
+
+        if len(snmp_device) == 0:
+            raise Exception("⛔ No nsmp device")
         
         print("🙋 Select device data success!")
 
@@ -31,22 +34,34 @@ class MakeData:
         hosts = self._select_device()
 
         snmp_devices_data: list[dict] = []
+
         for host in hosts["snmp_devices_ip"]:
             host = f"{host['ip']}:{host['port']}" 
 
-            cpu_idle     = trim_data(f"snmpwalk -v 2c -c public {host} ssCpuIdle")
-            memory_free  = trim_data(f"snmpwalk -v 2c -c public {host} memTotalFree")
-            memory_total = trim_data(f"snmpwalk -v 2c -c public {host} memTotalReal")
+            try: 
+                cpu_idle     = trim_data(f"snmpwalk -v 2c -c public {host} ssCpuIdle")
+                memory_free  = trim_data(f"snmpwalk -v 2c -c public {host} memTotalFree")
+                memory_total = trim_data(f"snmpwalk -v 2c -c public {host} memTotalReal")
 
-            cpu_usage_percentage    = 100 - cpu_idle
-            memory_usage_kilobyte   = round(memory_total - memory_free, 2)
-            memory_usage_percentage = "%.2f" % (memory_usage_kilobyte / round(memory_total, 2) * 100)
-            
-            snmp_devices_data.append({
-                "memory" : int(float(memory_usage_percentage)),
-                "cpu"    : cpu_usage_percentage, 
-                "ip"     : host.split(":")[0], 
-            })
+                cpu_usage_percentage    = 100 - cpu_idle
+                memory_usage_kilobyte   = round(memory_total - memory_free, 2)
+                memory_usage_percentage = "%.2f" % (memory_usage_kilobyte / round(memory_total, 2) * 100)
+                
+                snmp_devices_data.append({
+                    "status" : "online",
+                    "memory" : int(float(memory_usage_percentage)),
+                    "cpu"    : cpu_usage_percentage, 
+                    "ip"     : host.split(":")[0]
+                })
+
+            except:
+                snmp_devices_data.append({
+                    "status" : "offline",
+                    "memory" : 0,
+                    "cpu"    : 0, 
+                    "ip"     : host.split(":")[0]
+                })
+        print("snmp_devices_data::",snmp_devices_data)
         
         print("🙋 Process snmp device data success!")
 
@@ -67,9 +82,11 @@ class SendData:
             device_data.insert(0, self.local_time)
             prepared_devices_data.append(device_data)
 
+        print("prepared_devices_data::",prepared_devices_data)
+
         update_info = """
             update snmp_devices
-            set udate=%s, memory=%s, cpu=%s 
+            set udate=%s, status=%s, memory=%s, cpu=%s
             where ip=%s
         """
         cursor.executemany(update_info, (prepared_devices_data))
@@ -88,20 +105,23 @@ class SendData:
                 "_index"  : index,
                 "_type"   : "doc",
                 "_source" : {
-                    "ip"         : device_data["ip"],
-                    "cpu"        : device_data["cpu"],
-                    "memory"     : device_data["memory"],
-                    "utc_time"   : self.utc_time
+                    "ip"       : device_data["ip"],
+                    "cpu"      : device_data["cpu"],
+                    "memory"   : device_data["memory"],
+                    "status"   : device_data["status"], # 필요 없겠지만 받은김에 넣어봄
+                    "utc_time" : self.utc_time
                 }
             })
 
         helpers.bulk(es, docs)
+        print("es docs::", docs)
         
         print("🙋 Device data add to ES success!")
         print("logged time: ", self.local_time)
 
 make_data = MakeData()
 data      = make_data.process_device_data()
+print("data::",data)
 
 send_data = SendData()
 send_data.update_sql(data)

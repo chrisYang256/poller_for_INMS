@@ -20,7 +20,7 @@ dashboard = meraki.DashboardAPI(
 )
 
 # meraki api 다루는 연습 / 구조 파악을 위해 의도적으로 여러 template들을 써봄
-def select_meraki_organization() -> list:
+def select_meraki_organization() -> dict:
     orgs = dashboard.organizations.getOrganizations()
 
     org_id = ""
@@ -30,9 +30,6 @@ def select_meraki_organization() -> list:
 
     network_id = dashboard.networks.getOrganizationNetworks(org_id)[0]["id"]
 
-    if org_id or network_id is None:
-        raise Exception("⛔ No data")
-
     print("🙋 Select meraki organization success!")
 
     return { "org_id": org_id, "network_id": network_id }
@@ -41,15 +38,20 @@ def select_meraki_organization() -> list:
 def upsert_meraki_device_to_sql(meraki_org_info):
     org_id = meraki_org_info["org_id"]
 
-    meraki_device = dashboard.devices.getOrganizationDevices(org_id)
+    meraki_devices = dashboard.devices.getOrganizationDevices(org_id)
+    meraki_devices_status = dashboard.organizations.getOrganizationDeviceStatuses(org_id)
 
     meraki_device_list: list[list] = []
-    for device in meraki_device:
-        device = list(device.values())
+    for meraki_device in meraki_devices:
+        for meraki_device_status in  meraki_devices_status:
+            if meraki_device["serial"] == meraki_device_status["serial"]:
+                meraki_device["status"] = meraki_device_status["status"]
 
-        device.append(local_time)
-        meraki_device_list.append(device)
+        meraki_device = list(meraki_device.values())
 
+        meraki_device.append(local_time)
+        meraki_device_list.append(meraki_device)
+    
     db.connect()
     # on duplicate key update 내용 끝에 쉼표(,) 넣지 말것(4시간 날림)
     create_or_update_device = f"""
@@ -68,6 +70,7 @@ def upsert_meraki_device_to_sql(meraki_org_info):
             configurationUpdatedAt, 
             firmware, 
             url, 
+            status,
             udate
         )
         values ({",".join(["%s"] * len(meraki_device_list[0]))})
@@ -85,6 +88,7 @@ def upsert_meraki_device_to_sql(meraki_org_info):
             configurationUpdatedAt = values(configurationUpdatedAt), 
             firmware               = values(firmware), 
             url                    = values(url),
+            status                 = values(status),
             udate                  = values(udate)
     """
     cursor.executemany(create_or_update_device, meraki_device_list)
@@ -98,39 +102,39 @@ def upsert_meraki_device_to_sql(meraki_org_info):
 def add_meraki_client_to_es(meraki_org_info):
     network_id = meraki_org_info["network_id"]
 
-    meraki_client = dashboard.clients.getNetworkClients(network_id)
+    meraki_clients = dashboard.clients.getNetworkClients(network_id)
 
     index = f"ghyang-meraki-clients-{local_time.strftime('%Y%m%d')}"
 
     docs: list[dict] = []
-    for client_data in meraki_client:
+    for meraki_client in meraki_clients:
         docs.append({
             "_index"  : index,
             "_type"   : "doc",
             "_source" : {
-                "id"                 : client_data["id"],
-                "mac"                : client_data["mac"],
-                "description"        : client_data["description"],
-                "ip"                 : client_data["ip"],
-                "ip6"                : client_data["ip6"],
-                "ip6Local"           : client_data["ip6Local"],
-                "user"               : client_data["user"],
-                "firstSeen"          : client_data["firstSeen"],
-                "lastSeen"           : client_data["lastSeen"],
-                "manufacturer"       : client_data["manufacturer"],
-                "os"                 : client_data["os"],
-                "recentDeviceSerial" : client_data["recentDeviceSerial"],
-                "recentDeviceName"   : client_data["recentDeviceName"],
-                "recentDeviceMac"    : client_data["recentDeviceMac"],
-                "ssid"               : client_data["ssid"],
-                "vlan"               : client_data["vlan"],
-                "switchport"         : client_data["switchport"],
-                "usage_sent"         : client_data["usage"]["sent"],
-                "usage_recv"         : client_data["usage"]["recv"],
-                "status"             : client_data["status"],
-                "notes"              : client_data["notes"],
-                "smInstalled"        : client_data["smInstalled"],
-                "groupPolicy8021x"   : client_data["groupPolicy8021x"],
+                "id"                 : meraki_client["id"],
+                "mac"                : meraki_client["mac"],
+                "description"        : meraki_client["description"],
+                "ip"                 : meraki_client["ip"],
+                "ip6"                : meraki_client["ip6"],
+                "ip6Local"           : meraki_client["ip6Local"],
+                "user"               : meraki_client["user"],
+                "firstSeen"          : meraki_client["firstSeen"],
+                "lastSeen"           : meraki_client["lastSeen"],
+                "manufacturer"       : meraki_client["manufacturer"],
+                "os"                 : meraki_client["os"],
+                "recentDeviceSerial" : meraki_client["recentDeviceSerial"],
+                "recentDeviceName"   : meraki_client["recentDeviceName"],
+                "recentDeviceMac"    : meraki_client["recentDeviceMac"],
+                "ssid"               : meraki_client["ssid"],
+                "vlan"               : meraki_client["vlan"],
+                "switchport"         : meraki_client["switchport"],
+                "usage_sent"         : meraki_client["usage"]["sent"],
+                "usage_recv"         : meraki_client["usage"]["recv"],
+                "status"             : meraki_client["status"],
+                "notes"              : meraki_client["notes"],
+                "smInstalled"        : meraki_client["smInstalled"],
+                "groupPolicy8021x"   : meraki_client["groupPolicy8021x"],
                 "utc_time"           : utc_time
             }
         })
